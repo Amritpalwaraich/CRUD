@@ -1,12 +1,12 @@
-from django.urls import path, re_path
+from django.urls import path
+from django.contrib.auth import views as auth_views
 from . import views
 
-app_name = 'tasks'
-
 urlpatterns = [
-    path('create/', views.task_create, name='task_create'),
-    path('', views.task_list, name='task_list'),
-    re_path(r'^(?P<pk>\d+)/$', views.task_detail, name='task_detail'),
-    re_path(r'^(?P<pk>\d+)/update/$', views.task_update, name='task_update'),
-    re_path(r'^(?P<pk>\d+)/delete/$', views.task_delete, name='task_delete'),
+    
+    path('register/', views.register, name='register'),
+    path('profile/complete/', views.profile_complete, name='profile_complete'),
+    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('', views.dashboard, name="dashboard")
 ]

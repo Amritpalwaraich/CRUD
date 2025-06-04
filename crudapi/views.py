@@ -1,49 +1,49 @@
-from django.shortcuts import render,redirect, get_object_or_404
-from django.urls import reverse
-from .models import Task
-from .forms import TaskForm
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login
+from .models import Teacher, Student
+from .forms import UserRegisterForm, TeacherProfileForm, StudentProfileForm
 
+def dashboard(request):
+    return render(request, 'dashboard.html')
 
-# create a view Functional based 
+def register(request):
+    if request.method == 'POST':
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            
+            # Create profile based on user type
+            if form.cleaned_data.get('is_teacher'):
+                Teacher.objects.create(user=user)
+                user.is_teacher = True
+            elif form.cleaned_data.get('is_student'):
+                Student.objects.create(user=user)
+                user.is_student = True
+            user.save()
+            
+            login(request, user)
+            return redirect('profile_complete')
+    else:
+        form = UserRegisterForm()
+    return render(request, 'register.html', {'form': form})
 
-def task_create(request):
-    if request.method == "POST":
-        form = TaskForm(request.POST)
+@login_required
+def profile_complete(request):
+    if request.user.is_teacher:
+        form_class = TeacherProfileForm
+    elif request.user.is_student:
+        form_class = StudentProfileForm
+    else:
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        form = form_class(request.POST, instance=request.user.teacher if request.user.is_teacher else request.user.student)
         if form.is_valid():
             form.save()
-            return redirect(reverse("tasks:task_list"))
+            return redirect('dashboard')
     else:
-         form = TaskForm()
+        form = form_class(instance=request.user.teacher if request.user.is_teacher else request.user.student)
+    
+    return render(request, 'profile_complete.html', {'form': form})
 
-    return render(request, "tasks/task_form.html", { "form": form, })
-   
-   
-# Retrieve task list
-def task_list(request):
-     tasks = Task.objects.all()
-     return render(request, "tasks/task_list.html", { "tasks": tasks,}) 
- 
-# Retrieve a single task
-def task_detail(request, pk):
-    task = get_object_or_404(Task, pk=pk)
-    return render(request, "tasks/task_detail.html", { "task": task, })
- 
-# Update a single task
-def task_update(request, pk):
-     task_obj = get_object_or_404(Task, pk=pk)
-     if request.method == 'POST':
-         form = TaskForm(instance=task_obj, data=request.POST)
-         if form.is_valid():
-             form.save()
-             return redirect(reverse("tasks:task_detail", args=[pk,]))
-     else:
-         form = TaskForm(instance=task_obj)
-
-     return render(request, "tasks/task_form.html", { "form": form, "object": task_obj})
-
-
-# Delete a single task
-def task_delete(request, pk):
-    task_obj = get_object_or_404(Task, pk=pk)
-    task_obj.delete()
-    return redirect(reverse("tasks:task_list"))
